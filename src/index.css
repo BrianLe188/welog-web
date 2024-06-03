@@ -1,0 +1,7 @@
+body {
+    margin: 0;
+}
+
+.unmaxwidth-dialog .MuiDialog-container .MuiPaper-root {
+    max-width: none !important;
+}
