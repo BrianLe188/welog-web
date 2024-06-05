@@ -8,27 +8,39 @@ import {
     Typography,
     styled,
 } from "@mui/material";
-import { memo, useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { v4 } from "uuid";
+import { updateTodoByKey } from "../services/TodoService";
+import {
+    onUpdateTodoInTimelineSubscription,
+    useTimeline,
+} from "@/zustand/useTimeline";
+
+const label = { inputProps: { "aria-label": "Checkbox demo" } };
+
+type Data = ITodo & { tlId?: string };
 
 interface ITodoStyledProps {
     isDragging?: boolean;
     isActive?: boolean;
+    isDone?: boolean;
 }
 
 interface ITodoProps extends ITodoStyledProps {
-    data: ITodo;
+    data: Data;
     onSubmit: (value: ITodo) => void;
     onRemove: (id?: string) => void;
     onClick: () => void;
 }
 
 const defaultDetail = {
+    tlId: "",
     _id: v4(),
     title: "",
+    done: false,
 };
 
-export default memo(function Todo({
+export default function Todo({
     data,
     isDragging = false,
     isActive = false,
@@ -37,10 +49,17 @@ export default memo(function Todo({
     onClick,
 }: ITodoProps) {
     /**
+     * Subscriptions
+     */
+    const updateTodoInTimelineSubscription = useTimeline(
+        onUpdateTodoInTimelineSubscription,
+    );
+
+    /**
      * States
      */
     const [isShowInputTitle, setIsShowInputTitle] = useState(!data?.title);
-    const [detail, setDetail] = useState<ITodo>(defaultDetail);
+    const [detail, setDetail] = useState<Data>(defaultDetail);
 
     /**
      * Effects
@@ -80,14 +99,39 @@ export default memo(function Todo({
         }
     };
 
+    const handleCheckDone = async (e: ChangeEvent<HTMLInputElement>) => {
+        const updated = await updateTodoByKey({
+            data: {
+                params: { id: detail._id },
+                body: {
+                    key: "done",
+                    value: e.target.checked,
+                },
+            },
+            errorCallbackAction: (err) => {},
+        });
+
+        if (detail?.tlId && detail._id && updated)
+            updateTodoInTimelineSubscription(detail._id, updated, detail?.tlId);
+    };
+
     /**
      * Render
      */
 
     return (
-        <TodoBox onClick={onClick} isDragging={isDragging} isActive={isActive}>
+        <TodoBox
+            onClick={onClick}
+            isDragging={isDragging}
+            isActive={isActive}
+            isDone={detail.done}
+        >
             <Stack direction={"row"} spacing={2}>
-                <Checkbox />
+                <Checkbox
+                    {...label}
+                    onChange={handleCheckDone}
+                    checked={detail.done}
+                />
                 <Box sx={{ width: "100%" }}>
                     {isShowInputTitle ? (
                         <TextField
@@ -110,19 +154,28 @@ export default memo(function Todo({
                             }}
                             onClick={handleShowInputTitle}
                         >
-                            <Typography>{detail?.title}</Typography>
+                            <Typography
+                                sx={{
+                                    textDecoration: detail.done
+                                        ? "line-through"
+                                        : "",
+                                }}
+                            >
+                                {detail?.title}
+                            </Typography>
                         </ButtonBase>
                     )}
                 </Box>
             </Stack>
         </TodoBox>
     );
-});
+}
 
 const TodoBox = styled(Box)<ITodoStyledProps>(({
     theme,
     isDragging,
     isActive,
+    isDone,
 }) => {
     const styles: any = {
         border: 1,

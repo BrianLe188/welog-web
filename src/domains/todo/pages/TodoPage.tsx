@@ -6,7 +6,7 @@ import {
     onInitTodosInTimelineSubscription,
     onRemoveTodoInTimelineSubscription,
     onUpdateTodoInTimelineSubscription,
-    targetTimelineSelector,
+    timelinesSelector,
     useTimeline,
 } from "@/zustand/useTimeline";
 import { ControlPointOutlined } from "@mui/icons-material";
@@ -16,6 +16,8 @@ import { DragDropContext, DropResult, Droppable } from "react-beautiful-dnd";
 import Daily from "../components/Daily";
 import TodoDetail from "../components/TodoDetail";
 import Todos from "../components/Todos";
+import { createTodo, removeTodo, updateTodo } from "../services/TodoService";
+import { onSetMessageSubscription, useAlert } from "@/zustand/useAlert";
 
 const reorder = (list: ITodo[], startIndex: number, endIndex: number) => {
     const [removed] = list.splice(startIndex, 1);
@@ -32,7 +34,8 @@ export default function TodoPage() {
     /**
      * Subscriptions, Selections
      */
-    const targetTimeline = useTimeline(targetTimelineSelector);
+    const timelines = useTimeline(timelinesSelector);
+    const targetTimeline = timelines.find((tl) => tl.checked);
     const updateTodoInTimelineSubscription = useTimeline(
         onUpdateTodoInTimelineSubscription,
     );
@@ -45,43 +48,86 @@ export default function TodoPage() {
     const initTodosInTimelineSubscription = useTimeline(
         onInitTodosInTimelineSubscription,
     );
+    const alertSetMessageSubscription = useAlert(onSetMessageSubscription);
 
     /**
      * States
      */
     const [selectedTodo, setSelectedTodo] = useState<ITodo>();
     const [isAdding, setIsAdding] = useState(false);
+    const [isShowTodoDetail, setIsShowTodoDetail] = useState(false);
 
     /**
      * Function definition
      */
 
-    const handleUpdateTodo = (id: string, value: ITodo) => {
+    const handleShowTodoDetail = () => setIsShowTodoDetail(true);
+
+    const handleHideTodoDetail = () => setIsShowTodoDetail(false);
+
+    const handleUpdateTodo = async (id: string, value: ITodo) => {
         if (isAdding) {
             setIsAdding(false);
         }
 
-        if (targetTimeline)
-            updateTodoInTimelineSubscription(id, value, targetTimeline._id);
+        if (targetTimeline) {
+            const updated = await updateTodo({
+                data: {
+                    params: { id },
+                    body: value,
+                },
+                errorCallbackAction: (err: any) => {
+                    alertSetMessageSubscription(
+                        typeof err === "string" ? err : err.message,
+                        "error",
+                    );
+                },
+            });
+
+            updateTodoInTimelineSubscription(id, updated, targetTimeline._id);
+        }
     };
 
-    const handleAddTodo = () => {
-        if (targetTimeline) addTodoInTimelineSubscription(targetTimeline._id);
+    const handleAddTodo = async () => {
+        if (targetTimeline) {
+            const todo = await createTodo({
+                data: {
+                    body: { title: "", timeline_id: targetTimeline._id },
+                },
+                errorCallbackAction: (err: any) => {
+                    alertSetMessageSubscription(
+                        typeof err === "string" ? err : err.message,
+                        "error",
+                    );
+                },
+            });
+
+            if (todo) addTodoInTimelineSubscription(targetTimeline._id, todo);
+        }
+
         setIsAdding(true);
     };
 
-    const handleRemove = (id?: string) => {
+    const handleRemove = async (id?: string) => {
         if (isAdding) {
             setIsAdding(false);
         }
 
-        if (targetTimeline)
+        if (targetTimeline) {
+            if (id)
+                await removeTodo({
+                    data: { params: { id } },
+                    errorCallbackAction: () => {},
+                });
+
             removeTodoInTimelineSubscription(targetTimeline._id, id);
+        }
     };
 
     const handleSelectTodo = (todo: ITodo) => {
         if (selectedTodo?._id !== todo._id) {
             setSelectedTodo(todo);
+            handleShowTodoDetail();
         }
     };
 
@@ -98,11 +144,9 @@ export default function TodoPage() {
         if (targetTimeline)
             initTodosInTimelineSubscription(targetTimeline._id, todos);
     };
-
     /**
      * Render
      */
-
     return (
         <DragDropContext onDragEnd={handleDragEnd}>
             <Stack direction={"row"}>
@@ -146,6 +190,7 @@ export default function TodoPage() {
                                     }}
                                 >
                                     <Todos
+                                        tlId={targetTimeline?._id}
                                         todos={targetTimeline?.todos || []}
                                         onUpdateTodo={handleUpdateTodo}
                                         onRemoveTodo={handleRemove}
@@ -158,8 +203,10 @@ export default function TodoPage() {
                     </MainTodoListBox>
                 </MainBox>
                 <Box sx={{ minWidth: 500, padding: 3 }}>
-                    {selectedTodo?._id && selectedTodo?.title ? (
-                        <TodoDetail />
+                    {isShowTodoDetail &&
+                    selectedTodo?._id &&
+                    selectedTodo?.title ? (
+                        <TodoDetail onBack={handleHideTodoDetail} />
                     ) : (
                         <Daily />
                     )}

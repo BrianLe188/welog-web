@@ -1,8 +1,8 @@
 export interface IHttpRequestData<T> {
     data: {
-        query?: T;
-        params?: T;
-        body?: T;
+        query?: T | any;
+        params?: T | any;
+        body?: T | any;
     };
     errorCallbackAction?: (e?: unknown) => void;
 }

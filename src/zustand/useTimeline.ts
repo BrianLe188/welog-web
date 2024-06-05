@@ -1,15 +1,13 @@
 import { ITimeline, ITodo } from "@/share/types/timeline";
-import { v4 } from "uuid";
 import { create } from "zustand";
 
 interface IUseTimeline {
     timelines: ITimeline[];
-    target: null | ITimeline;
     onAddTimeline: (timeline: ITimeline) => void;
     onInitTimelines: (timelines: ITimeline[]) => void;
     onSetTarget: (id: string) => void;
     onUpdateTodoInTimeline: (tdId: string, value: ITodo, tlId: string) => void;
-    onAddTodoInTimeline: (tlId: string) => void;
+    onAddTodoInTimeline: (tlId: string, newTodo: ITodo) => void;
     onRemoveTodoInTimeline: (tlId: string, tdId?: string) => void;
     onInitTodosInTimeline: (tlId: string, todos: ITodo[]) => void;
 }
@@ -31,7 +29,12 @@ export const useTimeline = create<IUseTimeline>((set) => ({
     onSetTarget: (id: string) =>
         set((state) => ({
             ...state,
-            target: state.timelines.find((i) => i._id === id),
+            timelines: state.timelines.map((i) => {
+                if (i._id === id) i.checked = true;
+                else i.checked = false;
+
+                return i;
+            }),
         })),
     onUpdateTodoInTimeline: (tdId: string, value: ITodo, tlId: string) =>
         set((state) => ({
@@ -48,15 +51,11 @@ export const useTimeline = create<IUseTimeline>((set) => ({
                 }
             }),
         })),
-    onAddTodoInTimeline: (tlId: string) =>
+    onAddTodoInTimeline: (tlId: string, newTodo: ITodo) =>
         set((state) => ({
             ...state,
             timelines: state.timelines.map((tl) => {
                 if (tl._id === tlId) {
-                    const newTodo = {
-                        _id: v4(),
-                        title: "",
-                    };
                     tl.todos = [...(tl.todos || []), newTodo];
                     return tl;
                 } else {
@@ -89,7 +88,6 @@ export const useTimeline = create<IUseTimeline>((set) => ({
 }));
 
 export const timelinesSelector = (state: IUseTimeline) => state.timelines;
-export const targetTimelineSelector = (state: IUseTimeline) => state.target;
 
 export const onAddTimelineSubscription = (state: IUseTimeline) =>
     state.onAddTimeline;

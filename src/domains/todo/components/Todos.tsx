@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import { ITodo } from "@/share/types/timeline";
 
 interface ITodosProps {
+    tlId?: string;
     todos: ITodo[];
     selectedTodo: ITodo | undefined;
     onUpdateTodo: (id: string, value: ITodo) => void;
@@ -12,6 +13,7 @@ interface ITodosProps {
 }
 
 export default function Todos({
+    tlId,
     todos,
     selectedTodo,
     onUpdateTodo,
@@ -28,7 +30,10 @@ export default function Todos({
                     sx={{ marginBottom: 2 }}
                 >
                     <Todo
-                        data={e}
+                        data={{
+                            ...e,
+                            tlId,
+                        }}
                         onSubmit={(e) => onUpdateTodo(e._id, e)}
                         onRemove={onRemoveTodo}
                         onClick={() => e.title && onSelectTodo(e)}

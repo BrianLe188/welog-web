@@ -5,15 +5,16 @@ import { List, DoneAll, ErrorOutline } from "@mui/icons-material";
 
 interface ITaskDateProps {
     data: ITimeline;
+    onClick: (data: ITimeline) => void;
 }
 
 interface ITaskDateBoxProps {
     checked: boolean;
 }
 
-export default function TaskDate({ data }: ITaskDateProps) {
+export default function TaskDate({ data, onClick }: ITaskDateProps) {
     return (
-        <TaskDateBox checked={data.checked}>
+        <TaskDateBox checked={data.checked} onClick={() => onClick(data)}>
             <Stack
                 direction={"row"}
                 justifyContent={"space-between"}
@@ -29,7 +30,7 @@ export default function TaskDate({ data }: ITaskDateProps) {
                         <DoneAll color={"success"} />
                         <Text
                             title={String(
-                                data.todos?.filter((i) => i)?.length || 0,
+                                data.todos?.filter((i) => i.done)?.length || 0,
                             )}
                         />
                     </Stack>
@@ -37,7 +38,7 @@ export default function TaskDate({ data }: ITaskDateProps) {
                         <ErrorOutline color="error" />
                         <Text
                             title={String(
-                                data.todos?.filter((i) => i)?.length || 0,
+                                data.todos?.filter((i) => !i.done)?.length || 0,
                             )}
                         />
                     </Stack>
@@ -54,6 +55,7 @@ const TaskDateBox = styled(Box)<ITaskDateBoxProps>(({ theme, checked }) => {
         borderColor: checked ? theme.border.active : theme.border.primary,
         borderStyle: "solid",
         borderRadius: 15,
+        cursor: "pointer",
     };
 
     return styles;

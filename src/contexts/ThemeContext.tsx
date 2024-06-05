@@ -13,6 +13,7 @@ declare module "@mui/material/styles" {
             success: {
                 primary: string;
                 secondary: string;
+                thirt: string;
             };
         };
     }
@@ -27,6 +28,7 @@ declare module "@mui/material/styles" {
             success?: {
                 primary?: string;
                 secondary?: string;
+                thirt?: string;
             };
         };
     }
@@ -68,6 +70,7 @@ export default function ThemeContextProvider({
             success: {
                 primary: green[700],
                 secondary: green[300],
+                thirt: green[100],
             },
         },
     });
