@@ -54,3 +54,19 @@ export async function updateTodoByKey<T>({
         errorCallbackAction && errorCallbackAction(error);
     }
 }
+
+export async function reOrderTodo<T>({
+    data,
+    errorCallbackAction,
+}: IHttpRequestData<T>) {
+    try {
+        const res = await request().patch(
+            `/todos/${data.params?.id}/re-order`,
+            data.body,
+        );
+
+        if (res) return res.data;
+    } catch (error) {
+        errorCallbackAction && errorCallbackAction(error);
+    }
+}

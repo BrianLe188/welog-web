@@ -38,7 +38,7 @@ export default memo(function TaskDates() {
             data: { query: {} },
             errorCallbackAction: (err: any) => {
                 alertSetMessageSubscription(
-                    typeof err === "string" ? err : err.message,
+                    err.response?.data?.message,
                     "error",
                 );
             },

@@ -67,7 +67,7 @@ export default memo(function Daily() {
                 data: { body: { date: selectedDate.format("DD/MM/YYYY") } },
                 errorCallbackAction: (err: any) => {
                     alertSetMessageSubscription(
-                        typeof err === "string" ? err : err.message,
+                        err.response?.data?.message,
                         "error",
                     );
                 },

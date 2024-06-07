@@ -16,7 +16,12 @@ import { DragDropContext, DropResult, Droppable } from "react-beautiful-dnd";
 import Daily from "../components/Daily";
 import TodoDetail from "../components/TodoDetail";
 import Todos from "../components/Todos";
-import { createTodo, removeTodo, updateTodo } from "../services/TodoService";
+import {
+    createTodo,
+    reOrderTodo,
+    removeTodo,
+    updateTodo,
+} from "../services/TodoService";
 import { onSetMessageSubscription, useAlert } from "@/zustand/useAlert";
 
 const reorder = (list: ITodo[], startIndex: number, endIndex: number) => {
@@ -78,7 +83,7 @@ export default function TodoPage() {
                 },
                 errorCallbackAction: (err: any) => {
                     alertSetMessageSubscription(
-                        typeof err === "string" ? err : err.message,
+                        err.response?.data?.message,
                         "error",
                     );
                 },
@@ -90,13 +95,22 @@ export default function TodoPage() {
 
     const handleAddTodo = async () => {
         if (targetTimeline) {
+            const largestOrder =
+                targetTimeline.todos[targetTimeline.todos.length - 1]?.order ||
+                0;
+
             const todo = await createTodo({
                 data: {
-                    body: { title: "", timeline_id: targetTimeline._id },
+                    body: {
+                        title: "",
+                        timeline_id: targetTimeline._id,
+                        above: largestOrder,
+                        below: 0,
+                    },
                 },
                 errorCallbackAction: (err: any) => {
                     alertSetMessageSubscription(
-                        typeof err === "string" ? err : err.message,
+                        err.response?.data?.message,
                         "error",
                     );
                 },
@@ -135,6 +149,7 @@ export default function TodoPage() {
         if (!result.destination) {
             return;
         }
+
         const todos = reorder(
             targetTimeline?.todos || [],
             result.source.index,
@@ -143,6 +158,29 @@ export default function TodoPage() {
 
         if (targetTimeline)
             initTodosInTimelineSubscription(targetTimeline._id, todos);
+
+        const currentTodoIndex = todos.findIndex(
+            (td) => td._id === result.draggableId,
+        );
+
+        const above = todos[currentTodoIndex - 1]?.order || 0;
+        const below = todos[currentTodoIndex + 1]?.order || 0;
+
+        reOrderTodo({
+            data: {
+                params: { id: result.draggableId },
+                body: {
+                    above,
+                    below,
+                },
+            },
+            errorCallbackAction: (err: any) => {
+                alertSetMessageSubscription(
+                    err.response?.data?.message,
+                    "error",
+                );
+            },
+        });
     };
     /**
      * Render
@@ -179,7 +217,7 @@ export default function TodoPage() {
                         </Stack>
                         <Droppable
                             droppableId="todos"
-                            key={targetTimeline?.todos?.length}
+                            key={targetTimeline?._id}
                         >
                             {(provided, _snapshot) => (
                                 <Box
