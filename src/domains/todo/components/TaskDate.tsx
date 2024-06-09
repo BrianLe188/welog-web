@@ -5,16 +5,30 @@ import { List, DoneAll, ErrorOutline } from "@mui/icons-material";
 
 interface ITaskDateProps {
     data: ITimeline;
+    isDraggingOver?: boolean;
+    isDragging?: boolean;
     onClick: (data: ITimeline) => void;
 }
 
 interface ITaskDateBoxProps {
     checked: boolean;
+    isDragging?: boolean;
+    isDraggingOver?: boolean;
 }
 
-export default function TaskDate({ data, onClick }: ITaskDateProps) {
+export default function TaskDate({
+    data,
+    isDragging,
+    isDraggingOver,
+    onClick,
+}: ITaskDateProps) {
     return (
-        <TaskDateBox checked={data.checked} onClick={() => onClick(data)}>
+        <TaskDateBox
+            checked={data.checked}
+            isDragging={isDragging}
+            isDraggingOver={isDraggingOver}
+            onClick={() => onClick(data)}
+        >
             <Stack
                 direction={"row"}
                 justifyContent={"space-between"}
@@ -48,7 +62,12 @@ export default function TaskDate({ data, onClick }: ITaskDateProps) {
     );
 }
 
-const TaskDateBox = styled(Box)<ITaskDateBoxProps>(({ theme, checked }) => {
+const TaskDateBox = styled(Box)<ITaskDateBoxProps>(({
+    theme,
+    checked,
+    isDragging,
+    isDraggingOver,
+}) => {
     const styles: any = {
         padding: 15,
         border: 1,
@@ -57,6 +76,13 @@ const TaskDateBox = styled(Box)<ITaskDateBoxProps>(({ theme, checked }) => {
         borderRadius: 15,
         cursor: "pointer",
     };
+
+    if (isDragging) {
+        styles["opacity"] = isDraggingOver ? 1 : 0.3;
+        styles["borderColor"] = isDraggingOver
+            ? theme.border.active
+            : theme.border.primary;
+    }
 
     return styles;
 });

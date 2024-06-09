@@ -2,6 +2,7 @@ import { memo, useEffect } from "react";
 import TaskDate from "./TaskDate";
 import { Box } from "@mui/material";
 import {
+    isDraggingSelector,
     onInitTimelinesSubscription,
     onSetTargetSubscription,
     timelinesSelector,
@@ -17,6 +18,7 @@ export default memo(function TaskDates() {
      * Subscriptions, Selections
      */
     const timelines = useTimeline(timelinesSelector);
+    const isDragging = useTimeline(isDraggingSelector);
     const initTimelinesSubscription = useTimeline(onInitTimelinesSubscription);
     const setTargetTimelineSubscription = useTimeline(onSetTargetSubscription);
     const alertSetMessageSubscription = useAlert(onSetMessageSubscription);
@@ -64,15 +66,23 @@ export default memo(function TaskDates() {
 
     return timelines.map((e) => (
         <Droppable droppableId={e._id} key={e._id}>
-            {(provided, _snapshot) => (
-                <Box
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    sx={{ marginBottom: 2 }}
-                >
-                    <TaskDate key={e._id} data={e} onClick={handleClick} />
-                </Box>
-            )}
+            {(provided, snapshot) => {
+                return (
+                    <Box
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        sx={{ marginBottom: 2 }}
+                    >
+                        <TaskDate
+                            key={e._id}
+                            data={e}
+                            onClick={handleClick}
+                            isDragging={isDragging}
+                            isDraggingOver={snapshot.isDraggingOver}
+                        />
+                    </Box>
+                );
+            }}
         </Droppable>
     ));
 });

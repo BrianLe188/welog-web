@@ -4,7 +4,9 @@ import { ITodo } from "@/share/types/timeline";
 import {
     onAddTodoInTimelineSubscription,
     onInitTodosInTimelineSubscription,
+    onMoveTodoToAnotherTimelineSubscription,
     onRemoveTodoInTimelineSubscription,
+    onToggleDraggingSubscription,
     onUpdateTodoInTimelineSubscription,
     timelinesSelector,
     useTimeline,
@@ -12,7 +14,13 @@ import {
 import { ControlPointOutlined } from "@mui/icons-material";
 import { Box, Stack, styled } from "@mui/material";
 import { useState } from "react";
-import { DragDropContext, DropResult, Droppable } from "react-beautiful-dnd";
+import {
+    DragDropContext,
+    DragStart,
+    DropResult,
+    Droppable,
+    ResponderProvided,
+} from "react-beautiful-dnd";
 import Daily from "../components/Daily";
 import TodoDetail from "../components/TodoDetail";
 import Todos from "../components/Todos";
@@ -21,8 +29,10 @@ import {
     reOrderTodo,
     removeTodo,
     updateTodo,
+    updateTodoByKey,
 } from "../services/TodoService";
 import { onSetMessageSubscription, useAlert } from "@/zustand/useAlert";
+import { TODO_DROPPABLE_ID } from "../constant";
 
 const reorder = (list: ITodo[], startIndex: number, endIndex: number) => {
     const [removed] = list.splice(startIndex, 1);
@@ -41,11 +51,17 @@ export default function TodoPage() {
      */
     const timelines = useTimeline(timelinesSelector);
     const targetTimeline = timelines.find((tl) => tl.checked);
+    const toggleDraggingSubscription = useTimeline(
+        onToggleDraggingSubscription,
+    );
     const updateTodoInTimelineSubscription = useTimeline(
         onUpdateTodoInTimelineSubscription,
     );
     const addTodoInTimelineSubscription = useTimeline(
         onAddTodoInTimelineSubscription,
+    );
+    const moveTodoToAnotherTimelineSubscription = useTimeline(
+        onMoveTodoToAnotherTimelineSubscription,
     );
     const removeTodoInTimelineSubscription = useTimeline(
         onRemoveTodoInTimelineSubscription,
@@ -145,48 +161,86 @@ export default function TodoPage() {
         }
     };
 
-    const handleDragEnd = (result: DropResult) => {
+    const handleDragStart = (
+        _start: DragStart,
+        _provided: ResponderProvided,
+    ) => {
+        toggleDraggingSubscription();
+    };
+
+    const handleDragEnd = async (result: DropResult) => {
+        toggleDraggingSubscription();
+
         if (!result.destination) {
             return;
         }
 
-        const todos = reorder(
-            targetTimeline?.todos || [],
-            result.source.index,
-            result.destination.index,
-        );
-
-        if (targetTimeline)
-            initTodosInTimelineSubscription(targetTimeline._id, todos);
-
-        const currentTodoIndex = todos.findIndex(
-            (td) => td._id === result.draggableId,
-        );
-
-        const above = todos[currentTodoIndex - 1]?.order || 0;
-        const below = todos[currentTodoIndex + 1]?.order || 0;
-
-        reOrderTodo({
-            data: {
-                params: { id: result.draggableId },
-                body: {
-                    above,
-                    below,
+        if (
+            result.destination.droppableId !== TODO_DROPPABLE_ID &&
+            result.destination.droppableId !== targetTimeline?._id
+        ) {
+            const todo = await updateTodoByKey({
+                data: {
+                    params: {
+                        id: result.draggableId,
+                    },
+                    body: {
+                        key: "timeline_id",
+                        value: result.destination.droppableId,
+                    },
                 },
-            },
-            errorCallbackAction: (err: any) => {
-                alertSetMessageSubscription(
-                    err.response?.data?.message,
-                    "error",
+            });
+
+            if (todo && targetTimeline) {
+                moveTodoToAnotherTimelineSubscription(
+                    targetTimeline?._id,
+                    result.destination.droppableId,
+                    todo,
                 );
-            },
-        });
+            }
+        } else {
+            const todos = reorder(
+                targetTimeline?.todos || [],
+                result.source.index,
+                result.destination.index,
+            );
+
+            if (targetTimeline)
+                initTodosInTimelineSubscription(targetTimeline._id, todos);
+
+            const currentTodoIndex = todos.findIndex(
+                (td) => td._id === result.draggableId,
+            );
+
+            const above = todos[currentTodoIndex - 1]?.order || 0;
+            const below = todos[currentTodoIndex + 1]?.order || 0;
+
+            reOrderTodo({
+                data: {
+                    params: { id: result.draggableId },
+                    body: {
+                        above,
+                        below,
+                    },
+                },
+                errorCallbackAction: (err: any) => {
+                    alertSetMessageSubscription(
+                        err.response?.data?.message,
+                        "error",
+                    );
+                },
+            });
+        }
     };
+
     /**
      * Render
      */
     return (
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DragDropContext
+            onDragEnd={handleDragEnd}
+            onDragStart={handleDragStart}
+        >
             <Stack direction={"row"}>
                 <MainBox>
                     <MainHeadBox>
@@ -216,7 +270,7 @@ export default function TodoPage() {
                             />
                         </Stack>
                         <Droppable
-                            droppableId="todos"
+                            droppableId={TODO_DROPPABLE_ID}
                             key={targetTimeline?._id}
                         >
                             {(provided, _snapshot) => (

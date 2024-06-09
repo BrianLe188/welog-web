@@ -49,7 +49,7 @@ export async function updateTodoByKey<T>({
             data.body,
         );
 
-        if (res) return res.data;
+        if (res) return res.data as ITodo;
     } catch (error) {
         errorCallbackAction && errorCallbackAction(error);
     }

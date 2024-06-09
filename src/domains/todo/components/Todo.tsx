@@ -15,6 +15,7 @@ import {
     onUpdateTodoInTimelineSubscription,
     useTimeline,
 } from "@/zustand/useTimeline";
+import { onSetMessageSubscription, useAlert } from "@/zustand/useAlert";
 
 const label = { inputProps: { "aria-label": "Checkbox demo" } };
 
@@ -38,6 +39,7 @@ const defaultDetail = {
     _id: v4(),
     title: "",
     done: false,
+    order: 0,
 };
 
 export default function Todo({
@@ -54,6 +56,7 @@ export default function Todo({
     const updateTodoInTimelineSubscription = useTimeline(
         onUpdateTodoInTimelineSubscription,
     );
+    const alertSetMessageSubscription = useAlert(onSetMessageSubscription);
 
     /**
      * States
@@ -108,7 +111,12 @@ export default function Todo({
                     value: e.target.checked,
                 },
             },
-            errorCallbackAction: (err) => {},
+            errorCallbackAction: (err: any) => {
+                alertSetMessageSubscription(
+                    err.response?.data?.message,
+                    "error",
+                );
+            },
         });
 
         if (detail?.tlId && detail._id && updated)
