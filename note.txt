@@ -1,0 +1,1 @@
+1. In the future, use socket to add todo into timeline, instead of fetching timeline each time re-render

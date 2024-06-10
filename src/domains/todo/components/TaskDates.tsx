@@ -28,7 +28,7 @@ export default memo(function TaskDates() {
      */
 
     useEffect(() => {
-        handleGetTimelines();
+        if (timelines?.length === 0) handleGetTimelines();
     }, []);
 
     /**

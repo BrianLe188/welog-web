@@ -6,7 +6,7 @@ import { ITodo } from "@/share/types/timeline";
 interface ITodosProps {
     tlId?: string;
     todos: ITodo[];
-    selectedTodo: ITodo | undefined;
+    selectedTodoId: string | undefined;
     onUpdateTodo: (id: string, value: ITodo) => void;
     onRemoveTodo: (id?: string) => void;
     onSelectTodo: (todo: ITodo) => void;
@@ -15,7 +15,7 @@ interface ITodosProps {
 export default function Todos({
     tlId,
     todos,
-    selectedTodo,
+    selectedTodoId,
     onUpdateTodo,
     onRemoveTodo,
     onSelectTodo,
@@ -38,7 +38,7 @@ export default function Todos({
                         onRemove={onRemoveTodo}
                         onClick={() => e.title && onSelectTodo(e)}
                         isDragging={snapshot.isDragging}
-                        isActive={selectedTodo?._id === e._id}
+                        isActive={selectedTodoId === e._id}
                     />
                 </Box>
             )}

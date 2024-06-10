@@ -1,38 +1,25 @@
-import Button from "@/share/components/Button";
-import Text from "@/share/components/Text";
 import { ITodo } from "@/share/types/timeline";
+import { onSetMessageSubscription, useAlert } from "@/zustand/useAlert";
 import {
-    onAddTodoInTimelineSubscription,
     onInitTodosInTimelineSubscription,
     onMoveTodoToAnotherTimelineSubscription,
-    onRemoveTodoInTimelineSubscription,
     onToggleDraggingSubscription,
-    onUpdateTodoInTimelineSubscription,
     timelinesSelector,
     useTimeline,
 } from "@/zustand/useTimeline";
-import { ControlPointOutlined } from "@mui/icons-material";
-import { Box, Stack, styled } from "@mui/material";
-import { useState } from "react";
+import { Box, Stack } from "@mui/material";
+import { useCallback, useState } from "react";
 import {
     DragDropContext,
     DragStart,
     DropResult,
-    Droppable,
     ResponderProvided,
 } from "react-beautiful-dnd";
 import Daily from "../components/Daily";
+import MainBox from "../components/MainBox";
 import TodoDetail from "../components/TodoDetail";
-import Todos from "../components/Todos";
-import {
-    createTodo,
-    reOrderTodo,
-    removeTodo,
-    updateTodo,
-    updateTodoByKey,
-} from "../services/TodoService";
-import { onSetMessageSubscription, useAlert } from "@/zustand/useAlert";
 import { TODO_DROPPABLE_ID } from "../constant";
+import { reOrderTodo, updateTodoByKey } from "../services/TodoService";
 
 const reorder = (list: ITodo[], startIndex: number, endIndex: number) => {
     const [removed] = list.splice(startIndex, 1);
@@ -54,17 +41,8 @@ export default function TodoPage() {
     const toggleDraggingSubscription = useTimeline(
         onToggleDraggingSubscription,
     );
-    const updateTodoInTimelineSubscription = useTimeline(
-        onUpdateTodoInTimelineSubscription,
-    );
-    const addTodoInTimelineSubscription = useTimeline(
-        onAddTodoInTimelineSubscription,
-    );
     const moveTodoToAnotherTimelineSubscription = useTimeline(
         onMoveTodoToAnotherTimelineSubscription,
-    );
-    const removeTodoInTimelineSubscription = useTimeline(
-        onRemoveTodoInTimelineSubscription,
     );
     const initTodosInTimelineSubscription = useTimeline(
         onInitTodosInTimelineSubscription,
@@ -75,7 +53,6 @@ export default function TodoPage() {
      * States
      */
     const [selectedTodo, setSelectedTodo] = useState<ITodo>();
-    const [isAdding, setIsAdding] = useState(false);
     const [isShowTodoDetail, setIsShowTodoDetail] = useState(false);
 
     /**
@@ -86,80 +63,15 @@ export default function TodoPage() {
 
     const handleHideTodoDetail = () => setIsShowTodoDetail(false);
 
-    const handleUpdateTodo = async (id: string, value: ITodo) => {
-        if (isAdding) {
-            setIsAdding(false);
-        }
-
-        if (targetTimeline) {
-            const updated = await updateTodo({
-                data: {
-                    params: { id },
-                    body: value,
-                },
-                errorCallbackAction: (err: any) => {
-                    alertSetMessageSubscription(
-                        err.response?.data?.message,
-                        "error",
-                    );
-                },
-            });
-
-            updateTodoInTimelineSubscription(id, updated, targetTimeline._id);
-        }
-    };
-
-    const handleAddTodo = async () => {
-        if (targetTimeline) {
-            const largestOrder =
-                targetTimeline.todos[targetTimeline.todos.length - 1]?.order ||
-                0;
-
-            const todo = await createTodo({
-                data: {
-                    body: {
-                        title: "",
-                        timeline_id: targetTimeline._id,
-                        above: largestOrder,
-                        below: 0,
-                    },
-                },
-                errorCallbackAction: (err: any) => {
-                    alertSetMessageSubscription(
-                        err.response?.data?.message,
-                        "error",
-                    );
-                },
-            });
-
-            if (todo) addTodoInTimelineSubscription(targetTimeline._id, todo);
-        }
-
-        setIsAdding(true);
-    };
-
-    const handleRemove = async (id?: string) => {
-        if (isAdding) {
-            setIsAdding(false);
-        }
-
-        if (targetTimeline) {
-            if (id)
-                await removeTodo({
-                    data: { params: { id } },
-                    errorCallbackAction: () => {},
-                });
-
-            removeTodoInTimelineSubscription(targetTimeline._id, id);
-        }
-    };
-
-    const handleSelectTodo = (todo: ITodo) => {
-        if (selectedTodo?._id !== todo._id) {
-            setSelectedTodo(todo);
-            handleShowTodoDetail();
-        }
-    };
+    const handleSelectTodo = useCallback(
+        (todo: ITodo) => {
+            if (selectedTodo?._id !== todo._id) {
+                setSelectedTodo(todo);
+                handleShowTodoDetail();
+            }
+        },
+        [selectedTodo],
+    );
 
     const handleDragStart = (
         _start: DragStart,
@@ -242,58 +154,10 @@ export default function TodoPage() {
             onDragStart={handleDragStart}
         >
             <Stack direction={"row"}>
-                <MainBox>
-                    <MainHeadBox>
-                        <Text title="Todo" variant="h4" />
-                    </MainHeadBox>
-                    <MainTodoListBox>
-                        <Stack
-                            direction={"row"}
-                            alignItems={"center"}
-                            justifyContent={"space-between"}
-                        >
-                            <Text
-                                title={targetTimeline?.date || ""}
-                                variant="h5"
-                            />
-                            <Button
-                                name="New Task"
-                                icon={
-                                    <ControlPointOutlined
-                                        sx={{
-                                            color: "white",
-                                        }}
-                                    />
-                                }
-                                onClick={handleAddTodo}
-                                disabled={isAdding}
-                            />
-                        </Stack>
-                        <Droppable
-                            droppableId={TODO_DROPPABLE_ID}
-                            key={targetTimeline?._id}
-                        >
-                            {(provided, _snapshot) => (
-                                <Box
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                    sx={{
-                                        marginTop: 3,
-                                    }}
-                                >
-                                    <Todos
-                                        tlId={targetTimeline?._id}
-                                        todos={targetTimeline?.todos || []}
-                                        onUpdateTodo={handleUpdateTodo}
-                                        onRemoveTodo={handleRemove}
-                                        onSelectTodo={handleSelectTodo}
-                                        selectedTodo={selectedTodo}
-                                    />
-                                </Box>
-                            )}
-                        </Droppable>
-                    </MainTodoListBox>
-                </MainBox>
+                <MainBox
+                    selectedTodoId={selectedTodo?._id}
+                    onSelectTodo={handleSelectTodo}
+                />
                 <Box sx={{ minWidth: 500, padding: 3 }}>
                     {isShowTodoDetail &&
                     selectedTodo?._id &&
@@ -307,30 +171,3 @@ export default function TodoPage() {
         </DragDropContext>
     );
 }
-
-const MainBox = styled(Box)(({ theme }) => ({
-    flex: 1,
-    border: 0,
-    borderRight: 1,
-    height: "100vh",
-    overflow: "auto",
-    position: "relative",
-    borderColor: theme.border.primary,
-    borderStyle: "solid",
-}));
-
-const MainHeadBox = styled(Box)(({ theme }) => ({
-    border: 0,
-    borderBottom: 1,
-    padding: 15,
-    position: "sticky",
-    top: 0,
-    backgroundColor: "#fff",
-    zIndex: 100,
-    borderColor: theme.border.primary,
-    borderStyle: "solid",
-}));
-
-const MainTodoListBox = styled(Box)(({ theme }) => ({
-    padding: 15,
-}));
