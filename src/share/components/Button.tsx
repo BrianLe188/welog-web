@@ -41,6 +41,13 @@ const ButtonStyled = styled(MUIButton)(({ theme, color, disabled }) => {
                     backgroundColor: theme.palette.secondary.main,
                 };
                 break;
+            case "secondary":
+                styles["color"] = "white";
+                styles["backgroundColor"] = theme.palette.secondary.main;
+                styles["&:hover"] = {
+                    backgroundColor: theme.palette.secondary.main,
+                };
+                break;
             case "success":
                 styles["color"] = "white";
                 styles["backgroundColor"] = theme.status.success.primary;

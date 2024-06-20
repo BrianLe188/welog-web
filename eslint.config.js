@@ -14,6 +14,7 @@ export default [
             "@typescript-eslint/no-unused-vars": "error",
             "no-undef": "error",
             "no-console": "error",
+            "react/react-in-jsx-scope": "none",
         },
     },
 ];
